@@ -1,0 +1,48 @@
+deepfake-detection-system/
+│
+├── README.md
+├── requirements.txt
+├── .gitignore
+│
+├── data/
+│   ├── README.md
+│   └── sample/
+│       ├── sample_image.png
+│       └── sample_mask.png
+│
+├── notebooks/
+│   ├── 01_dataset_preparation.ipynb
+│   ├── 02_forensic_feature_extraction.ipynb
+│   ├── 03_mask_generation.ipynb
+│   ├── 04_unetpp_training.ipynb
+│   ├── 05_attention_unet_training.ipynb
+│   ├── 06_model_evaluation.ipynb
+│
+├── src/
+│   ├── dataset/
+│   │   └── dataloader.py
+│   │
+│   ├── features/
+│   │   ├── spn.py
+│   │   ├── prnu.py
+│   │   └── fusion.py
+│   │
+│   ├── models/
+│   │   ├── unetpp.py
+│   │   └── attention_unet.py
+│   │
+│   ├── training/
+│   │   └── trainer.py
+│   │
+│   ├── evaluation/
+│   │   └── metrics.py
+│   │
+│   └── utils/
+│       └── helpers.py
+│
+├── configs/
+│   ├── unetpp_config.yaml
+│   └── attention_unet_config.yaml
+│
+└── results/
+    └── README.md
