@@ -174,7 +174,7 @@ class Normalize:
     '''
     def normalize(self, warped_img, new_w, new_h, resize=False):
         if resize:
-            resized_img = cv2.resize(warped_img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+            warped_img = cv2.resize(warped_img, (new_w, new_h), interpolation=cv2.INTER_AREA)
 
         top = (256 - new_h) // 2
         bottom = 256 - new_h - top
