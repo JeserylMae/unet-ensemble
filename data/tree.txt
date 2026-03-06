@@ -1,0 +1,76 @@
+Dataset/
+├── Train/
+│   ├── GTA - Masks/
+│   │   ├── Authentic/
+│   │   │   ├── template-a
+│   │   │   ├── template-b
+│   │   │   └── template-c
+│   │   └── Synthetic/
+│   │       ├── template-a
+│   │       ├── template-b
+│   │       └── template-c
+│   ├── Feature - PRNU/
+│   │   ├── Authentic/
+│   │   │   ├── template-a
+│   │   │   ├── template-b
+│   │   │   └── template-c
+│   │   └── Synthetic/
+│   │       ├── template-a
+│   │       ├── template-b
+│   │       └── template-c
+│   ├── Feature - Illumination/
+│   │   ├── Authentic/
+│   │   │   ├── template-a
+│   │   │   ├── template-b
+│   │   │   └── template-c
+│   │   └── Synthetic/
+│   │       ├── template-a
+│   │       ├── template-b
+│   │       └── template-c
+│   └── Feature - Frequency/
+│       ├── Authentic/
+│       │   ├── template-a
+│       │   ├── template-b
+│       │   └── template-c
+│       └── Synthetic/
+│           ├── template-a
+│           ├── template-b
+│           └── template-c
+└── Validation/
+    ├── GTA - Masks/
+    │   ├── Authentic/
+    │   │   ├── template-a
+    │   │   ├── template-b
+    │   │   └── template-c
+    │   └── Synthetic/
+    │       ├── template-a
+    │       ├── template-b
+    │       └── template-c
+    ├── Feature - PRNU/
+    │   ├── Authentic/
+    │   │   ├── template-a
+    │   │   ├── template-b
+    │   │   └── template-c
+    │   └── Synthetic/
+    │       ├── template-a
+    │       ├── template-b
+    │       └── template-c
+    ├── Feature - Illumination/
+    │   ├── Authentic/
+    │   │   ├── template-a
+    │   │   ├── template-b
+    │   │   └── template-c
+    │   └── Synthetic/
+    │       ├── template-a
+    │       ├── template-b
+    │       └── template-c
+    └── Feature - Frequency/
+        ├── Authentic/
+        │   ├── template-a
+        │   ├── template-b
+        │   └── template-c
+        └── Synthetic/
+            ├── template-a
+            ├── template-b
+            └── template-c
+
