@@ -3,9 +3,10 @@ import numpy as np
 import albumentations as A
 
 from PIL import Image
+from torch.utils.data import Dataset
 
 
-class Dataset:
+class Dataset(Dataset):
     """
     Returns **5 tensors** per sample:
         - `prnu_t`, `illu_t`, `freq_t` — shape `(1, H, W)` each, for the MBEN branches
