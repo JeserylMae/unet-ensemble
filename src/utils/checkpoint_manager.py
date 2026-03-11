@@ -12,7 +12,7 @@ class CheckpointManager:
         }, path)
         print(f"Checkpoint saved at epoch {epoch}")
 
-    def load_checkpoint(self, model, optimizer, path="checkpoint.pth"):
+    def load_checkpoint(self, model, optimizer, scheduler, path="checkpoint.pth"):
         if os.path.exists(path):
             checkpoint = torch.load(path)
             model.load_state_dict(checkpoint['model_state_dict'])
