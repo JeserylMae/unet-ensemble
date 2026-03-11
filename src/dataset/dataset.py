@@ -42,7 +42,8 @@ class Dataset(Dataset):
 
     def _load_gray(self, path):
         """Load image as grayscale numpy array (H, W) uint8."""
-        return np.array(Image.open(path).convert('L'), dtype=np.uint8)
+        img = Image.open(path).convert('L').resize((self.img_size, self.img_size))
+        return np.array(img, dtype=np.uint8)
 
     def _norm_tensor(self, arr):
         """Normalise (H,W) uint8 -> (1, H, W) float tensor in [-1, 1]."""
@@ -53,11 +54,12 @@ class Dataset(Dataset):
     def __getitem__(self, idx):
         prnu_path, illu_path, freq_path, mask_path = self.samples[idx]
 
-        prnu = self._load_gray(prnu_path)   # (H, W)
+        prnu = self._load_gray(prnu_path)
         illu = self._load_gray(illu_path)
         freq = self._load_gray(freq_path)
-        mask = np.array(Image.open(mask_path).convert('L'), dtype=np.float32)
-        mask = (mask > 127).astype(np.float32)   # binarise
+        mask = np.array(Image.open(mask_path).convert('L').resize(
+            (self.img_size, self.img_size)), dtype=np.float32)  # ← add resize here
+        mask = (mask > 127).astype(np.float32)
 
         # albumentations requires a 3-ch 'image'; use channel-wise concat as the main image
         rgb = np.stack([prnu, illu, freq], axis=-1)   # (H, W, 3)
