@@ -43,10 +43,10 @@ class DataLoader:
                     illu_path = os.path.join(illu_dir,  fname)
                     freq_path = os.path.join(freq_dir,  fname)
 
-                    if all(os.path.isfile(p) for p in [prnu_path, illu_path, freq_path]):
-                        samples.append((prnu_path, illu_path, freq_path, mask_path))
+                    # if all(os.path.isfile(p) for p in [prnu_path, illu_path, freq_path]):
+                    #     samples.append((prnu_path, illu_path, freq_path, mask_path))
 
-                    # missing = [p for p in [prnu_path, illu_path, freq_path] if not os.path.isfile(p)]
+                    missing = [p for p in [prnu_path, illu_path, freq_path] if not os.path.isfile(p)]
                     if missing:
                         missing_log.append((fname, missing))  # ← log it
                     else:
