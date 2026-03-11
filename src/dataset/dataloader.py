@@ -19,6 +19,7 @@ class DataLoader:
         Non-existent directories are skipped with a warning.
         """
         samples = []
+        missing_log = [] 
         split_root = os.path.join(dataset_root, split)
 
         for category in self.CATEGORIES:
@@ -44,6 +45,13 @@ class DataLoader:
 
                     if all(os.path.isfile(p) for p in [prnu_path, illu_path, freq_path]):
                         samples.append((prnu_path, illu_path, freq_path, mask_path))
+
+        if missing_log:
+            print(f'[{split}] {len(missing_log)} samples skipped due to missing files:')
+            for fname, missing in missing_log[:10]:  # show first 10
+                print(f'  {fname} missing: {[os.path.basename(os.path.dirname(p)) for p in missing]}')
+            if len(missing_log) > 10:
+                print(f'  ... and {len(missing_log) - 10} more')
 
         print(f'[{split}] Total samples found: {len(samples)}')
         return samples
