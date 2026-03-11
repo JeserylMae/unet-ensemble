@@ -46,6 +46,12 @@ class DataLoader:
                     if all(os.path.isfile(p) for p in [prnu_path, illu_path, freq_path]):
                         samples.append((prnu_path, illu_path, freq_path, mask_path))
 
+                    # missing = [p for p in [prnu_path, illu_path, freq_path] if not os.path.isfile(p)]
+                    if missing:
+                        missing_log.append((fname, missing))  # ← log it
+                    else:
+                        samples.append((prnu_path, illu_path, freq_path, mask_path))
+
         if missing_log:
             print(f'[{split}] {len(missing_log)} samples skipped due to missing files:')
             for fname, missing in missing_log[:10]:  # show first 10
