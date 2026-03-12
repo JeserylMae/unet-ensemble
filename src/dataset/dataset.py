@@ -8,18 +8,39 @@ from torch.utils.data import Dataset
 
 class Dataset(Dataset):
     """
-    Returns **5 tensors** per sample:
-        - `prnu_t`, `illu_t`, `freq_t` — shape `(1, H, W)` each, for the MBEN branches
-        - `fused_t` — shape `(3, H, W)`, channel-wise concatenation for the concat stem
-        - `mask_t`  — shape `(1, H, W)`, binary ground-truth
+    Returns a tuple of tensors per sample whose contents depend on the active `features`:
 
-    If augment=True, random flips and rotations are also applied to the image and mask simultaneously during 
-    training to improve generalization.
+        Individual feature tensors — shape (1, H, W) each — for each active feature:
+            prnu_t        if 'prnu'         in features
+            illu_t        if 'illumination' in features
+            freq_t        if 'frequency'    in features
+        fused_t       — shape (C, H, W) where C = number of active features
+        mask_t        — shape (1, H, W), binary ground-truth
+
+    The return order is always: (*active_feature_tensors, fused_t, mask_t),
+    with active features in the fixed order: prnu → illumination → frequency.
+
+    Supported feature combinations:
+        ('prnu', 'illumination', 'frequency')  — returns prnu_t, illu_t, freq_t, fused_t, mask_t
+        ('prnu', 'frequency')                  — returns prnu_t, freq_t, fused_t, mask_t
+        ('prnu', 'illumination')               — returns prnu_t, illu_t, fused_t, mask_t
+        ('frequency', 'illumination')          — returns illu_t, freq_t, fused_t, mask_t
+
+    If augment=True, random flips and rotations are applied consistently across all feature
+    images and the mask during training to improve generalisation.
     """
 
-    def __init__(self, samples, img_size=256, augment=False):
+    FEATURE_ORDER = ('prnu', 'illumination', 'frequency')
+
+    def __init__(self, samples, img_size=256, augment=False,
+                 features=('prnu', 'illumination', 'frequency')):
         self.samples  = samples
         self.img_size = img_size
+        self.features = frozenset(f.lower() for f in features)
+
+        self.active_features = [f for f in self.FEATURE_ORDER if f in self.features]
+
+        additional_targets = {feat: 'image' for feat in self.active_features}
 
         if augment:
             self.spatial = A.Compose([
@@ -27,15 +48,11 @@ class Dataset(Dataset):
                 A.HorizontalFlip(p=0.5),
                 A.VerticalFlip(p=0.3),
                 A.RandomRotate90(p=0.3),
-            ], additional_targets={
-                'prnu': 'image', 'illu': 'image', 'freq': 'image', 'mask': 'mask'
-            })
+            ], additional_targets={**additional_targets, 'mask': 'mask'})
         else:
             self.spatial = A.Compose([
                 A.Resize(img_size, img_size),
-            ], additional_targets={
-                'prnu': 'image', 'illu': 'image', 'freq': 'image', 'mask': 'mask'
-            })
+            ], additional_targets={**additional_targets, 'mask': 'mask'})
 
     def __len__(self):
         return len(self.samples)
@@ -52,42 +69,51 @@ class Dataset(Dataset):
         return torch.from_numpy(arr).unsqueeze(0)
 
     def __getitem__(self, idx):
-        prnu_path, illu_path, freq_path, mask_path = self.samples[idx]
+        sample = self.samples[idx]
 
-        prnu = self._load_gray(prnu_path)
-        illu = self._load_gray(illu_path)
-        freq = self._load_gray(freq_path)
-        mask = np.array(Image.open(mask_path).convert('L').resize(
-            (self.img_size, self.img_size)), dtype=np.float32)  # ← add resize here
+        # Load only active feature images
+        raw = {}
+        for feat in self.active_features:
+            raw[feat] = self._load_gray(sample[feat])
+
+        mask = np.array(
+            Image.open(sample['mask']).convert('L').resize((self.img_size, self.img_size)),
+            dtype=np.float32,
+        )
         mask = (mask > 127).astype(np.float32)
 
-        # albumentations requires a 3-ch 'image'; use channel-wise concat as the main image
-        rgb = np.stack([prnu, illu, freq], axis=-1)   # (H, W, 3)
+        # albumentations requires a 3-channel 'image' as primary input.
+        # Use the first active feature (repeated 3×) as the dummy primary image;
+        # all features are passed as additional_targets so they receive identical transforms.
+        primary_feat = self.active_features[0]
+        primary_img  = np.stack([raw[primary_feat]] * 3, axis=-1)  # (H, W, 3)
 
-        out = self.spatial(
-            image=rgb,
-            prnu =np.stack([prnu, prnu, prnu], axis=-1),  # dummy 3-ch for aug consistency
-            illu =np.stack([illu, illu, illu], axis=-1),
-            freq =np.stack([freq, freq, freq], axis=-1),
-            mask =mask,
+        aug_kwargs = {'image': primary_img, 'mask': mask}
+        for feat in self.active_features:
+            # Pass each feature as a 3-channel image so albumentations accepts it
+            aug_kwargs[feat] = np.stack([raw[feat]] * 3, axis=-1)
+
+        out = self.spatial(**aug_kwargs)
+
+        # Extract single channel from augmented outputs and build tensors
+        feature_tensors = {}
+        for feat in self.active_features:
+            aug_arr = out[feat][:, :, 0]          # (H, W)
+            feature_tensors[feat] = self._norm_tensor(aug_arr)   # (1, H, W)
+
+        mask_aug = out['mask']                    # (H, W)
+
+        # fused_t: stack active features in canonical order → (C, H, W)
+        fused_t = torch.cat(
+            [feature_tensors[f] for f in self.active_features], dim=0
         )
 
-        # Extract single channel from augmented outputs
-        prnu_aug = out['prnu'][:, :, 0]   # (H, W)
-        illu_aug = out['illu'][:, :, 0]
-        freq_aug = out['freq'][:, :, 0]
-        mask_aug = out['mask']            # (H, W)
+        mask_t = torch.from_numpy(mask_aug).unsqueeze(0).float()  # (1, H, W)
 
-        # Individual tensors for MBEN — (1, H, W)
-        prnu_t = self._norm_tensor(prnu_aug)
-        illu_t = self._norm_tensor(illu_aug)
-        freq_t = self._norm_tensor(freq_aug)
-
-        # Channel-wise fused tensor — (3, H, W)
-        fused_t = torch.cat([prnu_t, illu_t, freq_t], dim=0)
-
-        mask_t = torch.from_numpy(mask_aug).unsqueeze(0).float()   # (1, H, W)
-
-        return prnu_t, illu_t, freq_t, fused_t, mask_t
-    
+        return (
+            *[feature_tensors[f] for f in self.active_features],
+            fused_t,
+            mask_t,
+        )
+   
 
