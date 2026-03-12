@@ -130,8 +130,18 @@ def visualize_prediction(
         dtype=np.uint8,
     )
 
-    cmap         = cm.get_cmap(colormap)
-    heatmap_rgba = (cmap(prob_map) * 255).astype(np.uint8)
+    # FIX 1 — Normalize colormap to masked region's actual min-max range
+    #          so the gradient is visible even when confidence is uniformly high
+    cmap = cm.get_cmap(colormap)
+    if only_masked and binary_mask.any():
+        masked_vals = prob_map[binary_mask > 0]
+        masked_min  = masked_vals.min()
+        masked_max  = masked_vals.max()
+    else:
+        masked_min, masked_max = 0.0, 1.0
+
+    norm_map     = (prob_map - masked_min) / (masked_max - masked_min + 1e-8)
+    heatmap_rgba = (cmap(norm_map) * 255).astype(np.uint8)
     heatmap_rgb  = heatmap_rgba[:, :, :3]
 
     if only_masked:
@@ -153,8 +163,8 @@ def visualize_prediction(
 
     blended = np.clip(blended_f, 0, 255).astype(np.uint8)
 
-    # 3-panel figure with colorbar
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    # FIX 2 — Wider figure to prevent colorbar from clipping the overlay panel
+    fig, axes = plt.subplots(1, 3, figsize=(17, 5))
     fig.patch.set_facecolor("#1a1a1a")
 
     for ax, img, title in zip(
@@ -166,11 +176,11 @@ def visualize_prediction(
         ax.set_title(title, color="white", fontsize=12, fontweight="bold")
         ax.axis("off")
 
-    # Colorbar
-    sm   = plt.cm.ScalarMappable(cmap=colormap, norm=plt.Normalize(vmin=0, vmax=1))
+    # FIX 3 — Attach colorbar only to the last axis and reflect actual min-max range
+    sm   = plt.cm.ScalarMappable(cmap=colormap, norm=plt.Normalize(vmin=masked_min, vmax=masked_max))
     sm.set_array([])
-    cbar = fig.colorbar(sm, ax=axes, fraction=0.02, pad=0.02)
-    cbar.set_label("Manipulation Confidence", color="white", fontsize=11)
+    cbar = fig.colorbar(sm, ax=axes[2], fraction=0.046, pad=0.04)
+    cbar.set_label("Manipulation Confidence", color="white", fontsize=11, labelpad=10)
     cbar.ax.yaxis.set_tick_params(color="white")
     plt.setp(cbar.ax.yaxis.get_ticklabels(), color="white")
 
