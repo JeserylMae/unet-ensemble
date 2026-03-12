@@ -5,7 +5,7 @@ from scipy.ndimage import gaussian_filter
 
 
 class PRNU:
-    def __init__(self, img_path):
+    def __init__(self, img_path=None):
         self.path = img_path
 
     def load_image(self):
