@@ -45,5 +45,5 @@ class CheckpointManager:
             return start_epoch, best_val_loss, early_stop_counter, train_losses, val_losses, val_auc, val_precision, val_recall, val_mcc
         
         # No checkpoint found — return defaults
-        return 0, float('inf'), 0, [], []
+        return 0, float('inf'), 0, [], [], [], [], [], []
 
