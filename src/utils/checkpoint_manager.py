@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 
 
 class CheckpointManager:
@@ -24,7 +25,9 @@ class CheckpointManager:
 
     def load_checkpoint(self, model, optimizer, scheduler, path="checkpoint.pth"):
         if os.path.exists(path) and path:
-            checkpoint = torch.load(path, weights_only=False)
+            with torch.serialization.safe_globals([np.core.multiarray.scalar]):
+                checkpoint = torch.load(path, weights_only=True)
+
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             
@@ -46,4 +49,3 @@ class CheckpointManager:
         
         # No checkpoint found — return defaults
         return 0, float('inf'), 0, [], [], [], [], [], []
-
