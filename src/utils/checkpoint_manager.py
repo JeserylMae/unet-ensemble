@@ -26,17 +26,7 @@ class CheckpointManager:
 
     def load_checkpoint(self, model, optimizer, scheduler, path="checkpoint.pth"):
         if os.path.exists(path) and path:
-            safe_globals = [
-                np.core.multiarray.scalar,
-                np.dtype,
-                np.ndarray,
-                np.int64,
-                np.float32,
-                np.float64,
-                np.bool_,
-            ]
-            with torch.serialization.safe_globals(safe_globals):
-                checkpoint = torch.load(path, weights_only=True)
+            checkpoint = torch.load(path, weights_only=False)
 
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
