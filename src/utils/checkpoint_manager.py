@@ -19,13 +19,23 @@ class CheckpointManager:
             'val_auc':              val_auc,
             'val_precision':        val_precision,
             'val_recall':           val_recall,
-            'val_mcc':              val_mcc
+            'val_mcc':              val_mcc,
         }, path)
         print(f"Checkpoint saved at epoch {epoch}")
 
+
     def load_checkpoint(self, model, optimizer, scheduler, path="checkpoint.pth"):
         if os.path.exists(path) and path:
-            with torch.serialization.safe_globals([np.core.multiarray.scalar]):
+            safe_globals = [
+                np.core.multiarray.scalar,
+                np.dtype,
+                np.ndarray,
+                np.int64,
+                np.float32,
+                np.float64,
+                np.bool_,
+            ]
+            with torch.serialization.safe_globals(safe_globals):
                 checkpoint = torch.load(path, weights_only=True)
 
             model.load_state_dict(checkpoint['model_state_dict'])
