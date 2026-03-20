@@ -126,7 +126,7 @@ class Evaluate:
         with open(config_path) as f:
             config = json.load(f)
 
-        _backbone_name = config.get('backbone', backbone_name)
+        _backbone_name = config.get('backbone', 'Unet')
         backbone = getattr(smp, _backbone_name)(
             encoder_name   =config.get('encoder', 'resnet34'),
             encoder_weights=config.get('encoder_weights', 'imagenet'),
