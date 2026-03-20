@@ -29,7 +29,7 @@ class RGBBaseline(nn.Module):
     """
 
     def __init__(self, model: nn.Module):
-        super().__init__)
+        super().__init__()
         self.model = model
 
     def forward(self, rgb: torch.Tensor) -> torch.Tensor:
