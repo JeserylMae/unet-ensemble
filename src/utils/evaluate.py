@@ -92,6 +92,49 @@ class Evaluate:
         print(f'[UNet++] Loaded from {repo_id}/{subfolder}')
         return model
 
+    def load_attentionunet_from_hub(self, repo_id: str, subfolder: str = 'all_features'):
+        """
+        Download and reconstruct a MBENUNetPlusPlus model from a Hugging Face repo.
+
+        Args
+        ----
+        repo_id   : str — HuggingFace repo id, e.g. 'hf-username/mben-attentionunet'.
+        subfolder : str — subdirectory inside the repo that holds model.safetensors
+                          and config.json (default: 'all_features').
+
+        Returns
+        -------
+        model : MBENUNetPlusPlus loaded on self.device in eval mode.
+        """
+        import json
+        from huggingface_hub import hf_hub_download
+        from safetensors.torch import load_file
+        from src.training.attention_unet import MBENAttentionUNet
+
+        config_path = hf_hub_download(
+            repo_id=repo_id,
+            filename=f'{subfolder}/config.json',
+        )
+        weights_path = hf_hub_download(
+            repo_id=repo_id,
+            filename=f'{subfolder}/model.safetensors',
+        )
+
+        with open(config_path) as f:
+            config = json.load(f)
+
+        model = MBENAttentionUNet(
+            mben_out_ch=config.get('mben_out_ch', 64),
+            features=config.get('features', list(self.features)),
+        ).to(self.device)
+
+        state_dict = load_file(weights_path, device=str(self.device))
+        model.load_state_dict(state_dict)
+        model.eval()
+
+        print(f'[Attention U-Net] Loaded from {repo_id}/{subfolder}')
+        return model
+
     def load_baseline_from_hub(self, repo_id: str, subfolder: str = 'all_features',
                                 backbone_name: str = 'unet'):
         """
