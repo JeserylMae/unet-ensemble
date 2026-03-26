@@ -155,45 +155,66 @@ class Evaluate:
         import segmentation_models_pytorch as smp
         from huggingface_hub import hf_hub_download
         from safetensors.torch import load_file
-        from src.training.baseline import MBENBaseline
+        from src.training.baseline import RGBBaseline
 
-        config_path = hf_hub_download(
-            repo_id=repo_id,
-            filename=f'{subfolder}/config.json',
-        )
-        weights_path = hf_hub_download(
-            repo_id=repo_id,
-            filename=f'{subfolder}/model.safetensors',
-        )
+        config_path = hf_hub_download(repo_id=repo_id, filename=f'{subfolder}/config.json')
+        weights_path = hf_hub_download(repo_id=repo_id, filename=f'{subfolder}/model.safetensors')
 
         with open(config_path) as f:
             config = json.load(f)
 
-        _backbone_name = config.get('backbone', 'Unet')
-        backbone = getattr(smp, _backbone_name)(
+        backbone = getattr(smp, config.get('backbone', 'Unet'))(
             encoder_name   =config.get('encoder', 'resnet34'),
             encoder_weights=config.get('encoder_weights', 'imagenet'),
-            in_channels    =config.get('in_channels', 3),
-            classes        =config.get('classes', 1),
+            in_channels    =3,
+            classes        =1,
             activation     =None,
         )
 
-        model = MBENBaseline(
-            model      =backbone,
-            mben_out_ch=config.get('mben_out_ch', 64),
-            features   =config.get('features', list(self.features)),
-        ).to(self.device)
+        model = RGBBaseline(model=backbone).to(self.device)
 
         state_dict = load_file(weights_path, device=str(self.device))
         model.load_state_dict(state_dict)
         model.eval()
 
-        print(f'[Baseline] Loaded from {repo_id}/{subfolder}')
+        print(f'[RGBBaseline] Loaded from {repo_id}/{subfolder}')
         return model
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Inference loop
-    # ─────────────────────────────────────────────────────────────────────────
+
+    @torch.no_grad()
+    def run_rgb(self, loader, model):
+        """Inference loop for RGBBaseline — expects (rgb, mask) batches."""
+        iou_scores, dice_scores, accuracy_scores, bf_scores = [], [], [], []
+
+        model.eval()
+        for batch in tqdm(loader, desc='Evaluating', leave=True):
+            # For RGB baseline the dataset should yield (rgb, mask)
+            rgb, masks = batch
+
+            rgb   = rgb.to(self.device)
+            masks = masks.to(self.device)
+
+            logits = model(rgb)
+            probs  = torch.sigmoid(logits)
+            preds  = (probs >= self.threshold).float()
+
+            preds_np = preds.cpu().numpy().astype(np.uint8)
+            masks_np = masks.cpu().numpy().astype(np.uint8)
+
+            for b in range(preds_np.shape[0]):
+                pred = preds_np[b, 0]
+                gt   = masks_np[b, 0]
+                iou_scores.append(self._iou(pred, gt))
+                dice_scores.append(self._dice(pred, gt))
+                accuracy_scores.append(self._pixel_accuracy(pred, gt))
+                bf_scores.append(self._boundary_f1(pred, gt))
+
+        return {
+            'IoU'           : round(float(np.mean(iou_scores)),      4),
+            'Dice'          : round(float(np.mean(dice_scores)),      4),
+            'Pixel_Accuracy': round(float(np.mean(accuracy_scores)), 4),
+            'BF_Score'      : round(float(np.mean(bf_scores)),       4),
+        }
 
     @torch.no_grad()
     def run(self, loader, model):
