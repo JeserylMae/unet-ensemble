@@ -135,22 +135,7 @@ class Evaluate:
         print(f'[Attention U-Net] Loaded from {repo_id}/{subfolder}')
         return model
 
-    def load_baseline_from_hub(self, repo_id: str, subfolder: str = 'all_features',
-                                backbone_name: str = 'unet'):
-        """
-        Download and reconstruct a MBENBaseline model from a Hugging Face repo.
-
-        Args
-        ----
-        repo_id       : str — HuggingFace repo id, e.g. 'hf-username/mben-baseline'.
-        subfolder     : str — subdirectory inside the repo.
-        backbone_name : str — smp model name used as the baseline backbone
-                              (read from config.json; this arg is the fallback).
-
-        Returns
-        -------
-        model : MBENBaseline loaded on self.device in eval mode.
-        """
+    def load_rgb_baseline_from_hub(self, repo_id: str, subfolder: str):
         import json
         import segmentation_models_pytorch as smp
         from huggingface_hub import hf_hub_download
