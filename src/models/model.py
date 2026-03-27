@@ -99,8 +99,14 @@ def predict(
     freq_t  = freq_t.to(device)
     fused_t = fused_t.to(device)
 
+    feature_dict = {
+        "prnu": prnu_t,
+        "illumination": illu_t,
+        "frequency": freq_t,
+    }
+
     with torch.no_grad():
-        logits = model(prnu_t, illu_t, freq_t, fused_t)   # (1, 1, H, W)
+        logits = model(feature_dict, fused_t)   # (1, 1, H, W)
 
     prob_map    = torch.sigmoid(logits).squeeze().cpu().numpy()          # (H, W)
     binary_mask = (prob_map >= threshold).astype(np.uint8) * 255        # (H, W)
