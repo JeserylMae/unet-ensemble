@@ -262,7 +262,80 @@ class Evaluate:
             'BF_Score'      : round(float(np.mean(bf_scores)),        4),
         }
 
-    # ─────────────────────────────────────────────────────────────────────────
+    @torch.no_grad()
+    def run_ensemble(self, loader, unetpp, attunet, alpha: float = 0.5):
+        """
+        Inference loop for the weighted U-Net Ensemble.
+
+        Runs both UNetPlusPlus and AttentionUNet on every batch from the forensic-
+        feature DataLoader (same format as run()), combines their sigmoid probability
+        maps as a weighted sum, then binarises and computes all four metrics.
+
+            Y = alpha * UNetPP(X) + (1 - alpha) * AttUNet(X),  alpha + beta = 1
+
+        Args
+        ----
+        loader  : DataLoader — forensic-feature test loader (same as used by run()).
+        unetpp  : MBENUNetPlusPlus   — loaded in eval mode on self.device.
+        attunet : MBENAttentionUNet  — loaded in eval mode on self.device.
+        alpha   : float — weight for U-Net++ output; Attention U-Net gets (1 - alpha).
+                          Must be in [0, 1]. Default 0.5 (equal weighting).
+
+        Returns
+        -------
+        metrics : dict with keys: IoU, Dice, Pixel_Accuracy, BF_Score.
+        """
+        if not (0.0 <= alpha <= 1.0):
+            raise ValueError(f"alpha must be in [0, 1], got {alpha}.")
+        beta = 1.0 - alpha
+
+        iou_scores      = []
+        dice_scores     = []
+        accuracy_scores = []
+        bf_scores       = []
+
+        unetpp.eval()
+        attunet.eval()
+
+        for batch in tqdm(loader, desc='Evaluating Ensemble', leave=True):
+            *feat_tensors, fused, masks = batch
+
+            feature_dict = {
+                feat: feat_tensors[i].to(self.device)
+                for i, feat in enumerate(self.active_features)
+            }
+            fused = fused.to(self.device)
+            masks = masks.to(self.device)
+
+            logits_unetpp  = unetpp(feature_dict, fused)   # (B, 1, H, W)
+            logits_attunet = attunet(feature_dict, fused)  # (B, 1, H, W)
+
+            prob_unetpp  = torch.sigmoid(logits_unetpp)    # (B, 1, H, W)
+            prob_attunet = torch.sigmoid(logits_attunet)   # (B, 1, H, W)
+
+            # Y = alpha * UNetPP(X) + beta * AttUNet(X)
+            prob_ensemble = alpha * prob_unetpp + beta * prob_attunet
+            preds = (prob_ensemble >= self.threshold).float()
+
+            preds_np = preds.cpu().numpy().astype(np.uint8)
+            masks_np = masks.cpu().numpy().astype(np.uint8)
+
+            for b in range(preds_np.shape[0]):
+                pred = preds_np[b, 0]
+                gt   = masks_np[b, 0]
+                iou_scores.append(self._iou(pred, gt))
+                dice_scores.append(self._dice(pred, gt))
+                accuracy_scores.append(self._pixel_accuracy(pred, gt))
+                bf_scores.append(self._boundary_f1(pred, gt))
+
+        return {
+            'IoU'           : round(float(np.mean(iou_scores)),      4),
+            'Dice'          : round(float(np.mean(dice_scores)),      4),
+            'Pixel_Accuracy': round(float(np.mean(accuracy_scores)), 4),
+            'BF_Score'      : round(float(np.mean(bf_scores)),       4),
+        }
+
+        # ─────────────────────────────────────────────────────────────────────────
     # Per-image metric helpers
     # ─────────────────────────────────────────────────────────────────────────
 
