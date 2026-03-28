@@ -60,6 +60,8 @@ def load_model(
     from_hub: bool = False,
     unetpp_hub_repo: str = None,
     attunet_hub_repo: str = None,
+    unetpp_hub_subfolder: str = None,
+    attunet_hub_subfolder: str = None,
     hub_filename: str = "model.safetensors",
     hub_token: str = None,
 ) -> tuple[MBENUNetPlusPlus, MBENAttentionUNet]:
@@ -83,16 +85,18 @@ def load_model(
         Tuple of (MBENUNetPlusPlus, MBENAttUNet), both in eval mode on `device`.
     """
 
-    def _load(model_cls, local_path, hub_repo, mben_out_ch=64):
+    def _load(model_cls, local_path, hub_repo, hub_subfolder, mben_out_ch=64):
         if from_hub:
             if not hub_repo:
                 raise ValueError(
                     f"hub_repo must be provided for {model_cls.__name__} when from_hub=True."
                 )
-            print(f"Downloading {model_cls.__name__} from HuggingFace: {hub_repo}/{hub_filename} ...")
+            location = f"{hub_repo}/{hub_subfolder}/{hub_filename}" if hub_subfolder else f"{hub_repo}/{hub_filename}"
+            print(f"Downloading {model_cls.__name__} from HuggingFace: {location} ...")
             local_path = hf_hub_download(
                 repo_id=hub_repo,
                 filename=hub_filename,
+                subfolder=hub_subfolder,
                 token=hub_token,
             )
             print(f"Downloaded to: {local_path}")
@@ -105,8 +109,8 @@ def load_model(
         print(f"{model_cls.__name__} loaded from: {local_path}")
         return model
 
-    unetpp  = _load(MBENUNetPlusPlus,  unetpp_path,  unetpp_hub_repo)
-    attunet = _load(MBENAttentionUNet, attunet_path, attunet_hub_repo)
+    unetpp  = _load(MBENUNetPlusPlus,  unetpp_path,  unetpp_hub_repo,  unetpp_hub_subfolder)
+    attunet = _load(MBENAttentionUNet, attunet_path, attunet_hub_repo, attunet_hub_subfolder)
 
     return unetpp, attunet
 
