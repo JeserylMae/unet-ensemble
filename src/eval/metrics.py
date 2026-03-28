@@ -4,19 +4,22 @@ from scipy.ndimage import binary_dilation
 from skimage.segmentation import find_boundaries
 
 
-class Metrics:
-    def feature_correlation(self, prob_map: np.ndarray, gt: np.ndarray) -> float:
-        """
-        Pearson correlation coefficient between the raw sigmoid probability map
-        and the binary ground-truth mask (both flattened to 1-D).
-
-        Returns 0.0 when the GT is constant (all-zero or all-one) because
-        Pearson r is undefined in that case.
-        """
+class Metrics:    
+    def feature_correlation(self, prob_map, gt):
         p = prob_map.flatten().astype(np.float64)
         g = gt.flatten().astype(np.float64)
+
+        if g.std() == 0 and p.std() == 0:
+            if g.mean() == 0 and p.mean() < 0.5:
+                return 1.0  
+            elif g.mean() == 1 and p.mean() >= 0.5:
+                return 1.0  
+            else:
+                return -1.0  
+        
         if g.std() == 0 or p.std() == 0:
-            return 0.0
+            return float('nan') 
+
         r, _ = pearsonr(p, g)
         return float(r)
 
