@@ -62,7 +62,7 @@ def load_model(
     attunet_hub_repo: str = None,
     hub_filename: str = "model.safetensors",
     hub_token: str = None,
-) -> tuple[MBENUNetPlusPlus, MBENAttUNet]:
+) -> tuple[MBENUNetPlusPlus, MBENAttentionUNet]:
     """
     Load both the MBEN U-Net++ and MBEN Attention U-Net models.
 
@@ -105,15 +105,15 @@ def load_model(
         print(f"{model_cls.__name__} loaded from: {local_path}")
         return model
 
-    unetpp  = _load(MBENUNetPlusPlus, unetpp_path,  unetpp_hub_repo)
-    attunet = _load(MBENAttUNet,      attunet_path, attunet_hub_repo)
+    unetpp  = _load(MBENUNetPlusPlus,  unetpp_path,  unetpp_hub_repo)
+    attunet = _load(MBENAttentionUNet, attunet_path, attunet_hub_repo)
 
     return unetpp, attunet
 
 
 def predict(
     unetpp: MBENUNetPlusPlus,
-    attunet: MBENAttUNet,
+    attunet: MBENAttentionUNet,
     image_path: str,
     image_size: int,
     device: torch.device,
