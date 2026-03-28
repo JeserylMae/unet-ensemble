@@ -7,7 +7,7 @@ from PIL import Image
 from safetensors.torch import load_file
 from huggingface_hub import hf_hub_download
 from src.training.unetpp import MBENUNetPlusPlus
-from src.training.attunet import MBENAttUNet
+from src.training.attention_unet import MBENAttentionUNet
 
 from src.utils.extract import (extract_prnu, 
                                extract_frequency, 
