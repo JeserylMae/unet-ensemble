@@ -9,20 +9,17 @@ class Metrics:
         p = prob_map.flatten().astype(np.float64)
         g = gt.flatten().astype(np.float64)
 
-        if g.std() == 0 and p.std() == 0:
-            if g.mean() == 0 and p.mean() < 0.5:
-                return 1.0  
-            elif g.mean() == 1 and p.mean() >= 0.5:
-                return 1.0  
-            else:
-                return -1.0  
-        
-        if g.std() == 0 or p.std() == 0:
-            return float('nan') 
+        if g.std() == 0 and g.mean() == 0:
+            return float(1.0 - p.mean())
+
+        if g.std() == 0 and g.mean() == 1:
+            return float(p.mean())
+
+        if p.std() == 0:
+            return float('nan')
 
         r, _ = pearsonr(p, g)
         return float(r)
-
 
     def dice(self, pred: np.ndarray, gt: np.ndarray) -> float:
         """Dice = 2·|P∩G| / (|P|+|G|)."""
