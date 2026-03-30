@@ -1,24 +1,25 @@
 import numpy as np
+import pandas as pd
 from scipy import stats
 
 
 class Test:
-    TESTS = {
-        'shapiro'    : lambda diff, alpha: _shapiro(diff, alpha),
-        'wilcoxon'   : lambda diff, alpha: _wilcoxon(diff),
-        'permutation': lambda diff, alpha: _permutation(diff),
-        'kruskal': lambda diff, alpha, config, col_key, df: _kruskal(diff, config, col_key, df),     
-    }
+    def _run_test(self, test, diff, alpha, config, col_key, df):
+        if test == 'shapiro'    : return self._shapiro(diff, alpha)
+        if test == 'wilcoxon'   : return self._wilcoxon(diff)
+        if test == 'permutation': return self._permutation(diff)
+        if test == 'kruskal'    : return self._kruskal(diff, config, col_key, df)
+        raise ValueError(f"Unknown test: '{test}'")
 
-    def _shapiro(diff, alpha):
+    def _shapiro(self, diff, alpha):
         _, p = stats.shapiro(diff)
         return {'SW p': f"{p:.4e}", 'Normal': p > alpha}
 
-    def _wilcoxon(diff):
+    def _wilcoxon(self, diff):
         _, p = stats.wilcoxon(diff, alternative='greater')
         return {'W p': f"{p:.6e}", 'Significant W p': p < 0.05}
 
-    def _permutation(diff):
+    def _permutation(self, diff):
         res = stats.permutation_test(
             (diff,), lambda x: x.mean(),
             permutation_type='samples', alternative='greater', n_resamples=9999
@@ -26,7 +27,7 @@ class Test:
         p = res.pvalue
         return {'Perm p': f"{p:.4e}", 'Significant Perm': p < 0.05}
 
-    def _kruskal(diff, config, col_key, df):
+    def _kruskal(self, diff, config, col_key, df):
         extra_cols = config.get('kruskal_groups', [])
         extra_groups = [df[col] for col in extra_cols]   # ← direct, not config[k]
         groups = [diff] + extra_groups
@@ -34,6 +35,7 @@ class Test:
         return {'Kruskal p': f"{p:.4e}", 'Significant Kruskal p': p < 0.05}
     
     def run_tests(
+        self,
         groups     : dict,                    # {'GroupName': {'df': df, ...col keys}}
         metrics    : list[tuple[str, str]],   # [('Display Name', 'col_key'), ...]
         tests      : list[str],               # ['shapiro', 'wilcoxon', 't-test', 'permutation']
@@ -67,12 +69,12 @@ class Test:
 
                 if 'kruskal' not in tests:
                     for test in tests:
-                        row.update(TESTS[test](diff, alpha))
+                        row.update(self._run_test[test](diff, alpha))
                 else: 
                     for test in tests:
                         row.update(
-                            TESTS[test](diff, alpha, config, col_key, df) if test == 'kruskal'
-                            else TESTS[test](diff, alpha)
+                            self._run_test[test](diff, alpha, config, col_key, df) if test == 'kruskal'
+                            else self._run_test[test](diff, alpha)
                         )
 
                 results.append(row)
