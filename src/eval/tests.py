@@ -9,6 +9,7 @@ class Test:
         if test == 'wilcoxon'   : return self._wilcoxon(diff)
         if test == 'permutation': return self._permutation(diff)
         if test == 'kruskal'    : return self._kruskal(diff, config, col_key, df)
+        if test == 'ci'         : return self._bootstrap_ci(diff, alpha)
         raise ValueError(f"Unknown test: '{test}'")
 
     def _shapiro(self, diff, alpha):
@@ -34,6 +35,23 @@ class Test:
         _, p = stats.kruskal(*groups)
         return {'Kruskal p': f"{p:.4e}", 'Significant Kruskal p': p < 0.05}
     
+    def _bootstrap_ci(self, diff, alpha, n_resamples=9999):
+        confidence_level = 1 - alpha
+        res = stats.bootstrap(
+            (diff,),
+            statistic=lambda x: x.mean(),
+            n_resamples=n_resamples,
+            confidence_level=confidence_level,
+            method='percentile',
+        )
+        lo, hi = res.confidence_interval
+        return {
+            'CI Lower'       : round(lo, 6),
+            'CI Upper'       : round(hi, 6),
+            'CI Level'       : f"{confidence_level * 100:.1f}%",
+            'Favors Proposed': bool(lo > 0),
+        }
+
     def run_tests(
         self,
         groups     : dict,                    # {'GroupName': {'df': df, ...col keys}}
