@@ -28,8 +28,8 @@ class Test:
         return {'Perm p': f"{p:.4e}", 'Significant Perm': p < 0.05}
 
     def _kruskal(self, diff, config, col_key, df):
-        extra_cols = config.get('kruskal_groups', [])
-        extra_groups = [df[col] for col in extra_cols]   # ← direct, not config[k]
+        extra_cols = config.get('kruskal_groups', {}).get(col_key, [])
+        extra_groups = [df[col] for col in extra_cols]
         groups = [diff] + extra_groups
         _, p = stats.kruskal(*groups)
         return {'Kruskal p': f"{p:.4e}", 'Significant Kruskal p': p < 0.05}
@@ -60,22 +60,15 @@ class Test:
             df = config['df']
             for display_name, col_key in metrics:
                 diff = df[config[col_key]]
-
+                
                 row = {
                     'Metric'    : display_name,
                     group_col   : group_name,
                     'Mean Diff' : round(diff.mean(), 6),
                 }
 
-                if 'kruskal' not in tests:
-                    for test in tests:
-                        row.update(self._run_test[test](diff, alpha))
-                else: 
-                    for test in tests:
-                        row.update(
-                            self._run_test[test](diff, alpha, config, col_key, df) if test == 'kruskal'
-                            else self._run_test[test](diff, alpha)
-                        )
+                for test in tests:
+                    row.update(self._run_test(test, diff, alpha, config, col_key, df))
 
                 results.append(row)
 
