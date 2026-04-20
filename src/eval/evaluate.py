@@ -164,6 +164,32 @@ class Evaluate:
 
         print(f'[RGBBaseline] Loaded from {repo_id}/{subfolder}')
         return model
+    
+    def load_segformer_from_hub(self, repo_id: str, subfolder: str = 'all_features'):
+        import json
+        from huggingface_hub import hf_hub_download
+        from safetensors.torch import load_file
+        from src.training.segformer import MBENSegFormer
+
+        config_path  = hf_hub_download(repo_id=repo_id, filename=f'{subfolder}/config.json')
+        weights_path = hf_hub_download(repo_id=repo_id, filename=f'{subfolder}/model.safetensors')
+
+        with open(config_path) as f:
+            config = json.load(f)
+
+        model = MBENSegFormer(
+            encoder_name   =config.get('encoder', 'nvidia/mit-b2'),
+            encoder_weights=config.get('encoder_weights', 'imagenet'),
+            in_channels    =config.get('in_channels', 3),
+            classes        =config.get('classes', 1),
+        ).to(self.device)
+
+        state_dict = load_file(weights_path, device=str(self.device))
+        model.load_state_dict(state_dict)
+        model.eval()
+
+        print(f'[SegFormer] Loaded from {repo_id}/{subfolder}')
+        return model
 
 
     @torch.no_grad()
